@@ -1,3 +1,3 @@
 module github.com/vamosdalian/EasyOSS
 
-go 1.24.10
+go 1.23
