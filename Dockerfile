@@ -8,7 +8,7 @@ RUN apk add --no-cache git
 WORKDIR /app
 
 # Copy go mod files
-COPY go.mod ./
+COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
@@ -34,11 +34,14 @@ RUN apk add --no-cache ca-certificates
 # Create non-root user
 RUN adduser -D -g '' easyoss
 
-# Create data and meta directories
-RUN mkdir -p /data /meta && chown easyoss:easyoss /data /meta
+# Create data and meta directories and config directory
+RUN mkdir -p /data /meta /etc/easyoss && chown easyoss:easyoss /data /meta /etc/easyoss
 
 # Copy binary from builder
 COPY --from=builder /easyoss /usr/local/bin/easyoss
+
+# Copy config file
+COPY --from=builder /app/config/config.yaml /etc/easyoss/config.yaml
 
 # Switch to non-root user
 USER easyoss
@@ -49,11 +52,6 @@ WORKDIR /data
 # Expose ports (S3 API and Web UI)
 EXPOSE 9000 9001
 
-# Set default environment variables
-ENV EASYOSS_DATA_PATH=/data
-ENV EASYOSS_S3_PORT=9000
-ENV EASYOSS_WEB_PORT=9001
-
-# Run the application (uses environment variables by default)
+# Run the application (uses config file by default)
 ENTRYPOINT ["easyoss"]
 CMD []

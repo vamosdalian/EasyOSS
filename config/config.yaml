@@ -1,0 +1,13 @@
+# EasyOSS Configuration
+
+# S3 API server port
+s3_port: 9000
+
+# Web UI server port
+web_port: 9001
+
+# Data storage path
+data_path: /data
+
+# Metadata storage path (defaults to <data_path>/.meta if not specified)
+meta_path: ""
