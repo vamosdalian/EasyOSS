@@ -30,22 +30,28 @@ type BucketMeta struct {
 // LocalStorage implements a local file system based storage
 type LocalStorage struct {
 	basePath string
+	metaPath string
 	mu       sync.RWMutex
 }
 
 // NewLocalStorage creates a new local storage instance
 func NewLocalStorage(basePath string) (*LocalStorage, error) {
+	return NewLocalStorageWithMeta(basePath, filepath.Join(basePath, ".meta"))
+}
+
+// NewLocalStorageWithMeta creates a new local storage instance with custom meta path
+func NewLocalStorageWithMeta(basePath, metaPath string) (*LocalStorage, error) {
 	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create base path: %w", err)
 	}
 
-	metaDir := filepath.Join(basePath, ".meta")
-	if err := os.MkdirAll(metaDir, 0755); err != nil {
+	if err := os.MkdirAll(metaPath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create meta directory: %w", err)
 	}
 
 	return &LocalStorage{
 		basePath: basePath,
+		metaPath: metaPath,
 	}, nil
 }
 
@@ -61,12 +67,12 @@ func (ls *LocalStorage) objectPath(bucket, key string) string {
 
 // metaPath returns the path for bucket metadata
 func (ls *LocalStorage) bucketMetaPath(bucket string) string {
-	return filepath.Join(ls.basePath, ".meta", bucket+".json")
+	return filepath.Join(ls.metaPath, bucket+".json")
 }
 
 // objectMetaPath returns the path for object metadata
 func (ls *LocalStorage) objectMetaPath(bucket, key string) string {
-	return filepath.Join(ls.basePath, ".meta", bucket, key+".json")
+	return filepath.Join(ls.metaPath, bucket, key+".json")
 }
 
 // CreateBucket creates a new bucket
@@ -84,7 +90,7 @@ func (ls *LocalStorage) CreateBucket(name string) error {
 	}
 
 	// Create bucket metadata directory
-	metaDir := filepath.Join(ls.basePath, ".meta", name)
+	metaDir := filepath.Join(ls.metaPath, name)
 	if err := os.MkdirAll(metaDir, 0755); err != nil {
 		return fmt.Errorf("failed to create bucket meta directory: %w", err)
 	}
@@ -137,7 +143,7 @@ func (ls *LocalStorage) DeleteBucket(name string) error {
 	_ = os.Remove(metaFile)
 
 	// Delete bucket meta directory
-	metaDir := filepath.Join(ls.basePath, ".meta", name)
+	metaDir := filepath.Join(ls.metaPath, name)
 	_ = os.RemoveAll(metaDir)
 
 	return nil
@@ -345,7 +351,7 @@ func (ls *LocalStorage) DeleteObject(bucket, key string) error {
 
 	// Clean up empty directories
 	ls.cleanupEmptyDirs(filepath.Dir(objectFile), ls.bucketPath(bucket))
-	ls.cleanupEmptyDirs(filepath.Dir(metaFile), filepath.Join(ls.basePath, ".meta", bucket))
+	ls.cleanupEmptyDirs(filepath.Dir(metaFile), filepath.Join(ls.metaPath, bucket))
 
 	return nil
 }

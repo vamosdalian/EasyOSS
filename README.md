@@ -77,9 +77,26 @@ aws --endpoint-url http://localhost:9000 s3 rb s3://mybucket
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-port` | 9000 | Server port |
+| `-port` | - | Combined port for both S3 API and Web UI (overrides `-s3-port` and `-web-port`) |
+| `-s3-port` | 9000 | S3 API port |
+| `-web-port` | 9001 | Web UI port |
 | `-data` | ./data | Data storage path |
+| `-meta` | - | Metadata storage path (defaults to `<data>/.meta`) |
 | `-version` | - | Show version information |
+
+## Environment Variables
+
+Environment variables can override command line options:
+
+| Variable | Description |
+|----------|-------------|
+| `EASYOSS_PORT` | Combined port for both S3 API and Web UI |
+| `EASYOSS_S3_PORT` | S3 API port |
+| `EASYOSS_WEB_PORT` | Web UI port |
+| `EASYOSS_DATA_PATH` | Data storage path |
+| `EASYOSS_META_PATH` | Metadata storage path |
+
+Priority order: Environment variables > Command line options > Defaults
 
 ## Supported S3 Operations
 
@@ -97,6 +114,8 @@ aws --endpoint-url http://localhost:9000 s3 rb s3://mybucket
 
 ## Docker Compose Example
 
+### Combined Mode (Single Port)
+
 ```yaml
 version: '3.8'
 services:
@@ -106,6 +125,29 @@ services:
       - "9000:9000"
     volumes:
       - ./data:/data
+    environment:
+      - EASYOSS_PORT=9000
+    restart: unless-stopped
+```
+
+### Separate Ports Mode
+
+```yaml
+version: '3.8'
+services:
+  easyoss:
+    image: ghcr.io/vamosdalian/easyoss:latest
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Web UI
+    volumes:
+      - ./data:/data
+      - ./meta:/meta
+    environment:
+      - EASYOSS_S3_PORT=9000
+      - EASYOSS_WEB_PORT=9001
+      - EASYOSS_DATA_PATH=/data
+      - EASYOSS_META_PATH=/meta
     restart: unless-stopped
 ```
 
