@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/vamosdalian/EasyOSS/internal/s3"
@@ -36,7 +36,7 @@ func New(config *Config) (*Server, error) {
 	// Determine meta path
 	metaPath := config.MetaPath
 	if metaPath == "" {
-		metaPath = config.DataPath + "/.meta"
+		metaPath = filepath.Join(config.DataPath, ".meta")
 	}
 
 	localStorage, err := storage.NewLocalStorageWithMeta(config.DataPath, metaPath)
@@ -125,7 +125,6 @@ func (s *Server) startCombinedServer(s3Handler *s3.S3Handler, webHandler *web.We
 
 // startSeparateServers starts S3 and Web on separate ports
 func (s *Server) startSeparateServers(s3Handler *s3.S3Handler, webHandler *web.WebHandler) error {
-	var wg sync.WaitGroup
 	errChan := make(chan error, 2)
 
 	// S3 API server
@@ -171,28 +170,21 @@ func (s *Server) startSeparateServers(s3Handler *s3.S3Handler, webHandler *web.W
 	}
 
 	// Start S3 server
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		if err := s.s3Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("S3 server error: %w", err)
 		}
 	}()
 
 	// Start Web server
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		if err := s.webServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("Web server error: %w", err)
 		}
 	}()
 
-	// Wait for first error or all servers to finish
-	select {
-	case err := <-errChan:
-		return err
-	}
+	// Block until an error occurs - shutdown is handled externally via Shutdown()
+	return <-errChan
 }
 
 // Shutdown gracefully shuts down the server
