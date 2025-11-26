@@ -270,3 +270,50 @@ func TestLocalStorage_ObjectWithMetadata(t *testing.T) {
 		t.Errorf("Expected metadata type 'document', got '%s'", meta.Metadata["type"])
 	}
 }
+
+func TestLocalStorage_SeparateMetaPath(t *testing.T) {
+	dataDir := t.TempDir()
+	metaDir := t.TempDir()
+
+	storage, err := NewLocalStorageWithMeta(dataDir, metaDir)
+	if err != nil {
+		t.Fatalf("Failed to create storage with separate meta: %v", err)
+	}
+
+	// Create bucket
+	err = storage.CreateBucket("test-bucket")
+	if err != nil {
+		t.Fatalf("Failed to create bucket: %v", err)
+	}
+
+	// Verify bucket directory is in data path
+	bucketPath := dataDir + "/test-bucket"
+	if _, err := os.Stat(bucketPath); os.IsNotExist(err) {
+		t.Errorf("Bucket directory was not created in data path")
+	}
+
+	// Verify metadata is in meta path
+	metaPath := metaDir + "/test-bucket.json"
+	if _, err := os.Stat(metaPath); os.IsNotExist(err) {
+		t.Errorf("Bucket metadata was not created in meta path")
+	}
+
+	// Put object
+	data := []byte("test content")
+	_, err = storage.PutObject("test-bucket", "test.txt", bytes.NewReader(data), int64(len(data)), "text/plain", nil)
+	if err != nil {
+		t.Fatalf("Failed to put object: %v", err)
+	}
+
+	// Verify object is in data path
+	objectPath := dataDir + "/test-bucket/test.txt"
+	if _, err := os.Stat(objectPath); os.IsNotExist(err) {
+		t.Errorf("Object was not created in data path")
+	}
+
+	// Verify object metadata is in meta path
+	objectMetaPath := metaDir + "/test-bucket/test.txt.json"
+	if _, err := os.Stat(objectMetaPath); os.IsNotExist(err) {
+		t.Errorf("Object metadata was not created in meta path")
+	}
+}
